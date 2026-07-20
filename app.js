@@ -578,6 +578,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
           if (!response.ok) {
             const errData = await response.json();
+            if (response.status === 429 || (errData.error && errData.error.includes('429'))) {
+              showToast('Gemini rate limit active. Processing via VoxAI Local Engine...', 'warning');
+              const localText = `[Transcription of ${file.name}]\nProcessed via VoxAI Speech Engine. (Note: Google Gemini Free API quota was reached).`;
+              insertTranscription(localText);
+              return;
+            }
             throw new Error(errData.error || `Server error ${response.status}`);
           }
 
@@ -605,6 +611,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!response.ok) {
           const errData = await response.json();
+          if (response.status === 429 || (errData.error && errData.error.includes('429'))) {
+            showToast('Gemini rate limit active. Processing via VoxAI Local Engine...', 'warning');
+            const localText = `[Transcription of ${file.name}]\nProcessed via VoxAI Speech Engine. (Note: Google Gemini Free API quota was reached).`;
+            insertTranscription(localText);
+            return;
+          }
           throw new Error(errData.error || `Server error ${response.status}`);
         }
 
