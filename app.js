@@ -760,10 +760,15 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function insertTranscription(text) {
+    if (!text) return;
+    textarea.disabled = false;
     textarea.value = text;
     confirmedTranscript = text;
+    interimOverlay.textContent = '';
+    interimOverlay.classList.remove('active');
     markDirty();
     checkTextareaEmpty();
+    textarea.scrollTop = 0;
   }
 
   // --- Text-To-Speech ---

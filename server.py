@@ -348,7 +348,7 @@ class VoxAIHandler(http.server.SimpleHTTPRequestHandler):
                                     }
                                 },
                                 {
-                                    "text": prompt or "Transcribe the audio/video file accurately and return only the transcript text."
+                                    "text": prompt or "Listen to the audio/video media carefully and write down every spoken word as verbatim transcript text. Do not summarize, output only the transcribed speech text."
                                 }
                             ]
                             
@@ -445,10 +445,7 @@ class VoxAIHandler(http.server.SimpleHTTPRequestHandler):
                                 }
                             })
                         
-                        if prompt:
-                            parts.append({"text": prompt})
-                        else:
-                            parts.append({"text": "Transcribe the audio/video file accurately and return only the transcript text."})
+                            parts.append({"text": prompt or "Listen to the audio/video media carefully and write down every spoken word as verbatim transcript text. Do not summarize, output only the transcribed speech text."})
                         
                         gemini_body = json.dumps({
                             "system_instruction": {
