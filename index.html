@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VoxAI - Speech to Text &amp; Intelligent AI Agent</title>
+  <meta name="description" content="Convert your speech to text in real time with high accuracy, translate or process it with AI agents. Supports English and Hindi.">
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <!-- CSS Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar / Settings Panel -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <span class="logo-icon">✨</span>
+          <h2>VoxAI Settings</h2>
+        </div>
+        <button class="icon-btn close-sidebar-btn" id="closeSidebar" aria-label="Close settings">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+
+      <div class="sidebar-content">
+        <div class="setting-group">
+          <label for="languageSelect">Input Language</label>
+          <div class="select-wrapper">
+            <select id="languageSelect">
+              <option value="en-US" selected>English (United States)</option>
+              <option value="hi-IN">Hindi (हिन्दी)</option>
+            </select>
+          </div>
+          <p class="setting-help">Select the spoken language for transcription accuracy.</p>
+        </div>
+
+        <div class="setting-group">
+          <label for="aiModeSelect">AI Mode</label>
+          <div class="select-wrapper">
+            <select id="aiModeSelect">
+              <option value="local" selected>Intelligent Local Agent (No Key)</option>
+              <option value="gemini">Google Gemini API (Key Required)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="setting-group id-gemini-config hidden" id="geminiConfigGroup">
+          <label for="apiKeyInput">Gemini API Key</label>
+          <div class="input-password-wrapper">
+            <input type="password" id="apiKeyInput" placeholder="Enter AIzaSy... API key" autocomplete="off">
+            <button class="toggle-password-btn" id="toggleApiKey" type="button" aria-label="Show password">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            </button>
+          </div>
+          <p class="setting-help">Get an API key from <a href="https://aistudio.google.com/" target="_blank" rel="noopener">Google AI Studio</a>. Your key is stored locally in your browser cache.</p>
+
+          <label for="geminiModelSelect" style="margin-top: 15px; display: block;">Gemini Model</label>
+          <div class="select-wrapper">
+            <select id="geminiModelSelect">
+              <option value="gemini-3.5-flash" selected>Gemini 3.5 Flash (Fast &amp; Smart)</option>
+              <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash-Lite (Lightweight)</option>
+              <option value="gemini-3.5-pro">Gemini 3.5 Pro (Complex Reasoning)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="setting-group">
+          <label>Voice Feedback (Speech Synthesis)</label>
+          <label class="switch">
+            <input type="checkbox" id="voiceFeedbackToggle" checked>
+            <span class="slider"></span>
+          </label>
+          <p class="setting-help">Read AI responses aloud automatically when generated.</p>
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <p>VoxAI v1.0.0 &bull; Built with HTML5 &amp; AI</p>
+      </div>
+      <!-- Resizer Handle for drag resize -->
+      <div class="sidebar-resizer" id="sidebarResizer" title="Drag to resize settings panel"></div>
+    </aside>
+
+    <!-- Backdrop for mobile sidebar -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+    <!-- Main Content Panel -->
+    <main class="main-content">
+      <!-- Navbar -->
+      <header class="navbar">
+        <div class="nav-brand">
+          <div class="nav-logo">
+            <svg class="sparkle-logo" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+            <span class="brand-text">Vox<span>AI</span></span>
+          </div>
+          <span class="status-badge stopped" id="statusBadge">
+            <span class="status-dot"></span>
+            <span class="status-text">Disconnected</span>
+          </span>
+          <!-- Saved/Unsaved Status Badge -->
+          <span class="doc-status-badge saved" id="docStatusBadge">
+            <span class="doc-status-dot"></span>
+            <span class="doc-status-text">Saved</span>
+          </span>
+        </div>
+
+        <div class="nav-actions">
+          <button class="nav-btn" id="saveFileBtn" title="Save current session to local disk">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+            <span>Save File</span>
+          </button>
+          <button class="nav-btn" id="viewSavedBtn" title="View previously saved sessions">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+            <span>Saved Files</span>
+          </button>
+          <button class="nav-btn" id="openSidebarBtn" title="Settings">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            <span>Settings</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Dashboard Workspace -->
+      <div class="workspace-grid">
+        <!-- Speech Section -->
+        <section class="card speech-card">
+          <div class="card-header">
+            <h3>Speech Input</h3>
+            <div class="language-indicator" id="currentLangBadge">English (US)</div>
+          </div>
+
+          <div class="text-editor-container">
+            <textarea 
+              id="transcriptionTextarea" 
+              placeholder="Your voice will appear here in real-time. Or click here to type directly..."
+              aria-label="Transcription output"
+            ></textarea>
+            
+            <!-- Real-time transcription indicator inside text area (interim transcript) -->
+            <div class="interim-overlay" id="interimOverlay"></div>
+          </div>
+
+          <!-- Speech Controller Toolbar -->
+          <div class="controls-toolbar">
+            <div class="left-controls">
+              <button class="circle-btn danger" id="clearTextBtn" title="Clear Text">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+              </button>
+              <button class="circle-btn" id="copyTextBtn" title="Copy Text">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              </button>
+              <button class="circle-btn" id="uploadFileBtn" title="Upload Audio/Video File">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+              </button>
+              <input type="file" id="fileUploadInput" accept="audio/*,video/*" style="display: none;">
+            </div>
+
+            <!-- Central Microphone Button & Ring visualizers -->
+            <div class="mic-trigger-container">
+              <div class="pulse-ring ring-1"></div>
+              <div class="pulse-ring ring-2"></div>
+              <div class="pulse-ring ring-3"></div>
+              
+              <button class="mic-btn" id="micBtn" aria-label="Toggle speech recognition">
+                <svg class="mic-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                  <line x1="12" y1="19" x2="12" y2="23"></line>
+                  <line x1="8" y1="23" x2="16" y2="23"></line>
+                </svg>
+                <svg class="stop-icon hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
+                </svg>
+              </button>
+            </div>
+
+            <div class="right-controls">
+              <button class="ai-send-btn" id="sendToAiBtn" disabled>
+                <span class="btn-text">Send to AI</span>
+                <svg class="sparkles-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m11.32 11.32l.707-.707M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="mic-hint-text" id="micHint">Click the mic or press Space to start listening</div>
+        </section>
+
+        <!-- Divider/Resizer for workspace layout split -->
+        <div class="workspace-resizer" id="workspaceResizer" title="Drag to adjust panel split"></div>
+
+        <!-- AI Response Section -->
+        <section class="card ai-card">
+          <div class="card-header">
+            <h3>AI Response Agent</h3>
+            <div class="ai-actions">
+              <button class="text-action-btn" id="ttsBtn" title="Speak Response" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"></path><path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
+                <span>Read Aloud</span>
+              </button>
+              <button class="text-action-btn" id="copyAiBtn" title="Copy response" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                <span>Copy</span>
+              </button>
+              <button class="text-action-btn" id="clearAiBtn" title="Clear AI response" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                <span>Clear</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="ai-response-viewport" id="aiResponseViewport">
+            <!-- Empty state -->
+            <div class="empty-state" id="aiEmptyState">
+              <div class="empty-icon">🤖</div>
+              <h4>No conversation started yet</h4>
+              <p>Type or dictate your text, then click "Send to AI" to receive a tailored response.</p>
+            </div>
+            
+            <!-- AI Response Content -->
+            <div class="ai-output-container hidden" id="aiOutputContainer">
+              <div class="ai-bubble">
+                <div class="ai-avatar">AI</div>
+                <div class="ai-text-content" id="aiTextContent">
+                  <!-- AI response will be inserted here dynamically -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Loader / Thinking State -->
+            <div class="ai-loader-container hidden" id="aiLoader">
+              <div class="loader-waves">
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+              <p class="loader-text">VoxAI is composing a response...</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- Notification Toast -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Saved Files List Modal -->
+  <div class="modal-backdrop" id="filesListModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>📂 Saved Sessions</h3>
+        <button class="icon-btn close-modal-btn" id="closeFilesListModal" aria-label="Close modal">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="saved-files-list" id="savedFilesList">
+          <div class="loading-spinner">Loading saved files...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Save Name Dialog Modal -->
+  <div class="modal-backdrop" id="saveNameModal">
+    <div class="modal-card mini">
+      <div class="modal-header">
+        <h3>💾 Save Session</h3>
+        <button class="icon-btn" id="closeSaveNameModal" aria-label="Close">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-form-group">
+          <label for="sessionNameInput">Session Name</label>
+          <input type="text" id="sessionNameInput" placeholder="e.g., Marketing Brainstorming" value="">
+          <button class="ai-send-btn" id="confirmSaveBtn" style="justify-content: center; width: 100%; margin-top: 16px;">Save Now</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Script -->
+  <script src="app.js?v=3"></script>
+</body>
+</html>
