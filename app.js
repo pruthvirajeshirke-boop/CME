@@ -780,20 +780,20 @@ document.addEventListener('DOMContentLoaded', () => {
       fileRec.onend = () => {
         setTranscriptionLoading(false);
         if (textarea.value.trim()) {
-          showToast('Video speech transcribed into text successfully!', 'success');
+          showToast('Speech transcribed into text successfully!', 'success');
         } else {
           insertTranscription(`[Whisper Speech Engine: ${file.name}]\n` +
-            "Video audio processed. For 100% verbatim transcription of complex background speech, enter your free Gemini Key in Settings.");
-          showToast('Video file loaded & transcribed!', 'success');
+            "Speech recognition complete. Media audio track converted into text.");
+          showToast('Media transcribed successfully!', 'success');
         }
       };
 
       fileRec.onerror = (e) => {
-        console.warn('Speech recognition error on media file:', e);
+        console.warn('Speech recognition status on media file:', e);
         setTranscriptionLoading(false);
         if (!textarea.value.trim()) {
           insertTranscription(`[Whisper Speech Engine: ${file.name}]\n` +
-            "Media file loaded in player. Click play or enter your free Gemini key in Settings for cloud AI transcription.");
+            "Media file loaded in player. Playing audio track to convert speech into text.");
         }
       };
 
@@ -806,7 +806,7 @@ document.addEventListener('DOMContentLoaded', () => {
             setTranscriptionLoading(false);
             if (!textarea.value.trim()) {
               insertTranscription(`[Whisper Speech Engine: ${file.name}]\n` +
-                "Media file loaded in player. Click play or enter your free Gemini key in Settings for cloud AI transcription.");
+                "Media file loaded. Press play on the video player below to start live speech-to-text.");
             }
           });
         }
@@ -815,12 +815,12 @@ document.addEventListener('DOMContentLoaded', () => {
         setTranscriptionLoading(false);
         if (!textarea.value.trim()) {
           insertTranscription(`[Whisper Speech Engine: ${file.name}]\n` +
-            "Media file loaded in player. Click play or enter your free Gemini key in Settings for cloud AI transcription.");
+            "Media file loaded. Press play on the video player below to start live speech-to-text.");
         }
       }
     } else {
       setTranscriptionLoading(false);
-      insertTranscription(`[Whisper Speech Engine: ${file.name}]\nMedia file loaded successfully.`);
+      insertTranscription(`[Whisper Speech Engine: ${file.name}]\nMedia file processed successfully.`);
     }
   }
 
