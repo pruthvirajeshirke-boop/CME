@@ -309,7 +309,7 @@ class VoxAIHandler(http.server.SimpleHTTPRequestHandler):
             if file_type:
                 # 1. Raw Binary File Upload Pathway
                 api_key = self.headers.get("X-API-Key", "").strip()
-                model = self.headers.get("X-Model", "gemini-3.5-flash").strip()
+                model = self.headers.get("X-Model", "gemini-2.0-flash").strip()
                 filename = self.headers.get("X-File-Name", "uploaded_file").strip()
                 prompt = self.headers.get("X-Prompt", "").strip()
                 
@@ -326,7 +326,7 @@ class VoxAIHandler(http.server.SimpleHTTPRequestHandler):
                 file_uri, file_name = self._upload_file_to_gemini(api_key, filename, file_type, file_bytes)
                 
                 gemini_data = None
-                fallback_models = ["gemini-3.5-flash", "gemini-3.1-flash-lite"] if model == "gemini-3.5-flash" else [model]
+                fallback_models = ["gemini-2.0-flash", "gemini-1.5-flash"] if model == "gemini-2.0-flash" else [model]
                 try:
                     # Wait for file to become active
                     print(f"[VoxAI] Waiting for file {file_name} to become active...")
@@ -380,8 +380,8 @@ class VoxAIHandler(http.server.SimpleHTTPRequestHandler):
                             model = current_model
                             break
                         except urllib.error.HTTPError as err:
-                            if err.code in [404, 429] and current_model == "gemini-3.5-flash" and len(fallback_models) > 1:
-                                print(f"[VoxAI] HTTP {err.code} encountered on gemini-3.5-flash. Retrying with fallback model gemini-3.1-flash-lite...")
+                            if err.code in [404, 429] and current_model == "gemini-2.0-flash" and len(fallback_models) > 1:
+                                print(f"[VoxAI] HTTP {err.code} encountered on gemini-2.0-flash. Retrying with fallback model gemini-1.5-flash...")
                                 continue
                             raise err
                 finally:
@@ -409,7 +409,7 @@ class VoxAIHandler(http.server.SimpleHTTPRequestHandler):
                 request_data = json.loads(body)
                 
                 api_key = request_data.get("apiKey", "").strip()
-                model = request_data.get("model", "gemini-3.5-flash").strip()
+                model = request_data.get("model", "gemini-2.0-flash").strip()
                 prompt = request_data.get("prompt", "").strip()
                 file_data = request_data.get("file")
                 
@@ -422,7 +422,7 @@ class VoxAIHandler(http.server.SimpleHTTPRequestHandler):
                     self._send_json_error(400, "Prompt or file is required.")
                     return
                 
-                fallback_models = ["gemini-3.5-flash", "gemini-3.1-flash-lite"] if model == "gemini-3.5-flash" else [model]
+                fallback_models = ["gemini-2.0-flash", "gemini-1.5-flash"] if model == "gemini-2.0-flash" else [model]
                 gemini_data = None
                 
                 for current_model in fallback_models:
@@ -475,8 +475,8 @@ class VoxAIHandler(http.server.SimpleHTTPRequestHandler):
                         model = current_model
                         break
                     except urllib.error.HTTPError as err:
-                        if err.code in [404, 429] and current_model == "gemini-3.5-flash" and len(fallback_models) > 1:
-                            print(f"[VoxAI] HTTP {err.code} encountered on gemini-3.5-flash. Retrying with fallback model gemini-3.1-flash-lite...")
+                        if err.code in [404, 429] and current_model == "gemini-2.0-flash" and len(fallback_models) > 1:
+                            print(f"[VoxAI] HTTP {err.code} encountered on gemini-2.0-flash. Retrying with fallback model gemini-1.5-flash...")
                             continue
                         raise err
                 
@@ -506,10 +506,10 @@ class VoxAIHandler(http.server.SimpleHTTPRequestHandler):
 
             status_map = {
                 400: f"Bad request: {err_msg}",
-                401: f"Invalid API key (401): {err_msg}",
+                401: f"Invalid API key (401): {err_msg}. Please check your API key in Settings.",
                 403: f"API key forbidden (403): {err_msg}. Check API key restrictions in Google AI Studio.",
-                404: f"Model not found (404). Try switching to 'Gemini 3.5 Flash' in Settings.",
-                429: "Rate limit exceeded (429). Wait a moment and try again. Alternatively, switch the Gemini Model in settings to 'Gemini 3.5 Flash' or 'Gemini 3.5 Pro', or provide a paid-tier API key in settings.",
+                404: f"Model not found (404). Try switching to 'Gemini 2.0 Flash' in Settings.",
+                429: "Rate limit exceeded (429). Wait a moment and try again, or switch model in settings to 'Gemini 1.5 Flash'.",
             }
             user_msg = status_map.get(e.code, f"Gemini API Error {e.code}: {err_msg}")
             self._send_json_error(e.code if e.code < 600 else 502, user_msg)

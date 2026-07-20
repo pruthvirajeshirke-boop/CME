@@ -89,7 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function loadSettings() {
     const aiMode = localStorage.getItem('voxai_aiMode') || 'local';
     const apiKey = localStorage.getItem('voxai_apiKey') || '';
-    const model = localStorage.getItem('voxai_model') || 'gemini-3.5-flash';
+    const model = localStorage.getItem('voxai_model') || 'gemini-2.0-flash';
     const voiceFeedback = localStorage.getItem('voxai_voiceFeedback') !== 'false';
     const lang = localStorage.getItem('voxai_lang') || 'en-US';
 
