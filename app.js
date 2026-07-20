@@ -412,6 +412,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!recognition) return;
     if (restartTimeout) clearTimeout(restartTimeout);
     isListening = true;
+    confirmedTranscript = textarea.value.trim() ? textarea.value.trim() + ' ' : '';
     recognition = createRecognitionInstance();
     bindRecognitionEvents();
     recognition.lang = languageSelect.value;
