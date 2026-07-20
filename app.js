@@ -528,7 +528,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const aiMode = aiModeSelect.value;
       if (aiMode === 'local') {
         setTranscriptionLoading(true, `Uploading & Transcribing ${file.name} (${fileMbStr})...`);
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, 1500));
         const simulatedText = `[Simulated Transcription of ${file.name}]\nThis is a mock transcription of your uploaded ${file.type.split('/')[0]} file. To get real transcription, please configure your Gemini API Key in Settings and switch the AI Mode to "Google Gemini API".`;
         insertTranscription(simulatedText);
         showToast('File transcribed successfully (Simulated)!', 'success');
@@ -541,25 +541,57 @@ document.addEventListener('DOMContentLoaded', () => {
           throw new Error('Gemini API Key missing! Enter your API key in Settings, or switch AI Mode to "Intelligent Local Agent".');
         }
 
-        // Optimize smaller media files (<50MB) by extracting audio in browser.
-        // For larger files (>=50MB), skip in-browser decoding to avoid RAM crash and upload directly to Gemini Files API.
+        // Optimize smaller media files (<50MB) by extracting audio track in browser.
         if ((file.type.startsWith('video/') || file.type.startsWith('audio/')) && file.size < 50 * 1024 * 1024) {
-          setTranscriptionLoading(true, `Optimizing media for rapid upload (extracting audio track)...`);
+          setTranscriptionLoading(true, `Optimizing audio track for fast upload...`);
           try {
             const audioBlob = await extractAudioFromMedia(file);
             uploadFile = audioBlob;
             const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
             uploadName = `${baseName}.wav`;
             uploadType = 'audio/wav';
-            console.log(`[VoxAI] Media optimized. Original size: ${file.size} bytes. Optimized size: ${audioBlob.size} bytes.`);
+            console.log(`[VoxAI] Media optimized. Original: ${file.size} bytes ➔ Audio WAV: ${audioBlob.size} bytes.`);
           } catch (optimizeErr) {
             console.warn('[VoxAI] Could not extract/optimize audio, sending original file:', optimizeErr);
           }
         }
 
-        setTranscriptionLoading(true, `Uploading & Transcribing ${file.name} (${fileMbStr})...`);
-
         const model = geminiModelSelect.value;
+
+        // FAST PATHWAY: For files/blobs <= 15MB, use Inline Base64 (1-2 seconds, zero polling delay)
+        if (uploadFile.size <= 15 * 1024 * 1024) {
+          setTranscriptionLoading(true, `Transcribing ${uploadName} (${(uploadFile.size / (1024 * 1024)).toFixed(1)} MB)...`);
+          const base64Data = await readFileAsBase64(uploadFile);
+          
+          const response = await fetch('/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              apiKey: apiKey,
+              model: model,
+              file: {
+                mimeType: uploadType || 'audio/wav',
+                data: base64Data
+              }
+            })
+          });
+
+          if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error || `Server error ${response.status}`);
+          }
+
+          const data = await response.json();
+          if (!data.text) throw new Error('Received an empty response from transcription service.');
+
+          insertTranscription(data.text);
+          showToast('File transcribed in seconds!', 'success');
+          return;
+        }
+
+        // RESUMABLE FILES API PATHWAY: For large files > 15MB
+        setTranscriptionLoading(true, `Uploading & Transcribing large file ${file.name} (${fileMbStr})...`);
+
         const response = await fetch('/api/generate', {
           method: 'POST',
           headers: {

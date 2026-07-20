@@ -272,7 +272,7 @@ class VoxAIHandler(http.server.SimpleHTTPRequestHandler):
         except Exception as e:
             print(f"[VoxAI] Warning: Failed to clean up file {file_name} from Gemini Files API: {e}")
 
-    def _wait_for_file_active(self, api_key, file_name, timeout_seconds=300, poll_interval=2):
+    def _wait_for_file_active(self, api_key, file_name, timeout_seconds=300, poll_interval=1):
         """Poll the Gemini Files API status endpoint until the file is ACTIVE."""
         status_url = f"https://generativelanguage.googleapis.com/v1beta/{file_name}?key={api_key}"
         req = urllib.request.Request(status_url, method="GET")
