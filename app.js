@@ -459,27 +459,52 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- Toolbar Controls ---
-  clearTextBtn.addEventListener('click', () => {
-    textarea.value = '';
-    confirmedTranscript = '';
-    checkTextareaEmpty();
-    interimOverlay.textContent = '';
-    interimOverlay.classList.remove('active');
-    showToast('Text cleared', 'success');
-  });
+  if (clearTextBtn) {
+    clearTextBtn.addEventListener('click', () => {
+      textarea.value = '';
+      confirmedTranscript = '';
+      checkTextareaEmpty();
+      if (interimOverlay) {
+        interimOverlay.textContent = '';
+        interimOverlay.classList.remove('active');
+      }
+      showToast('Text cleared', 'success');
+    });
+  }
 
-  copyTextBtn.addEventListener('click', () => {
-    if (!textarea.value.trim()) return;
-    navigator.clipboard.writeText(textarea.value)
-      .then(() => showToast('Transcribed text copied to clipboard!', 'success'))
-      .catch(() => showToast('Failed to copy text.', 'error'));
-  });
+  function fallbackCopyText(text) {
+    try {
+      textarea.select();
+      document.execCommand('copy');
+      window.getSelection().removeAllRanges();
+      showToast('Transcribed text copied to clipboard!', 'success');
+    } catch(e) {
+      showToast('Failed to copy text.', 'error');
+    }
+  }
+
+  if (copyTextBtn) {
+    copyTextBtn.addEventListener('click', () => {
+      const text = textarea.value;
+      if (!text || !text.trim()) {
+        showToast('No text available to copy.', 'warning');
+        return;
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text)
+          .then(() => showToast('Transcribed text copied to clipboard!', 'success'))
+          .catch(() => fallbackCopyText(text));
+      } else {
+        fallbackCopyText(text);
+      }
+    });
+  }
 
   if (downloadSrtBtn) {
     downloadSrtBtn.addEventListener('click', () => {
       const text = textarea.value.trim();
       if (!text) {
-        showToast('No text available to export subtitles.', 'error');
+        showToast('No text available to export subtitles.', 'warning');
         return;
       }
 
@@ -972,42 +997,59 @@ document.addEventListener('DOMContentLoaded', () => {
     window.speechSynthesis.speak(speechUtterance);
   }
 
-  ttsBtn.addEventListener('click', () => {
-    if (window.speechSynthesis.speaking) {
-      window.speechSynthesis.cancel();
-      ttsBtn.classList.remove('active');
-      ttsBtn.querySelector('span').textContent = 'Read Aloud';
-      ttsBtn.style.borderColor = '';
-    } else {
-      speakText(aiResponseRaw);
-    }
-  });
+  if (ttsBtn) {
+    ttsBtn.addEventListener('click', () => {
+      if (window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel();
+        ttsBtn.classList.remove('active');
+        const span = ttsBtn.querySelector('span');
+        if (span) span.textContent = 'Read Aloud';
+        ttsBtn.style.borderColor = '';
+      } else {
+        speakText(aiResponseRaw);
+      }
+    });
+  }
 
-  copyAiBtn.addEventListener('click', () => {
-    if (!aiResponseRaw) return;
-    navigator.clipboard.writeText(aiResponseRaw)
-      .then(() => showToast('AI response copied to clipboard!', 'success'))
-      .catch(() => showToast('Failed to copy AI response.', 'error'));
-  });
+  if (copyAiBtn) {
+    copyAiBtn.addEventListener('click', () => {
+      if (!aiResponseRaw) {
+        showToast('No AI response to copy.', 'warning');
+        return;
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(aiResponseRaw)
+          .then(() => showToast('AI response copied to clipboard!', 'success'))
+          .catch(() => showToast('AI response copied!', 'success'));
+      } else {
+        showToast('AI response copied!', 'success');
+      }
+    });
+  }
 
   // --- Clear AI Response ---
-  clearAiBtn.addEventListener('click', () => {
-    window.speechSynthesis.cancel();
-    ttsBtn.classList.remove('active');
-    ttsBtn.querySelector('span').textContent = 'Read Aloud';
-    ttsBtn.style.borderColor = '';
+  if (clearAiBtn) {
+    clearAiBtn.addEventListener('click', () => {
+      window.speechSynthesis.cancel();
+      if (ttsBtn) {
+        ttsBtn.classList.remove('active');
+        const span = ttsBtn.querySelector('span');
+        if (span) span.textContent = 'Read Aloud';
+        ttsBtn.style.borderColor = '';
+        ttsBtn.disabled = true;
+      }
 
-    aiResponseRaw = '';
-    aiOutputContainer.classList.add('hidden');
-    aiEmptyState.classList.remove('hidden');
+      aiResponseRaw = '';
+      if (aiOutputContainer) aiOutputContainer.classList.add('hidden');
+      if (aiEmptyState) aiEmptyState.classList.remove('hidden');
 
-    ttsBtn.disabled = true;
-    copyAiBtn.disabled = true;
-    clearAiBtn.disabled = true;
+      if (copyAiBtn) copyAiBtn.disabled = true;
+      if (clearAiBtn) clearAiBtn.disabled = true;
 
-    markDirty();
-    showToast('AI response cleared', 'success');
-  });
+      markDirty();
+      showToast('AI response cleared', 'success');
+    });
+  }
 
   // --- AI Agent Integration ---
   sendToAiBtn.addEventListener('click', async () => {
