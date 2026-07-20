@@ -89,7 +89,12 @@ document.addEventListener('DOMContentLoaded', () => {
   function loadSettings() {
     const aiMode = localStorage.getItem('voxai_aiMode') || 'local';
     const apiKey = localStorage.getItem('voxai_apiKey') || '';
-    const model = localStorage.getItem('voxai_model') || 'gemini-2.0-flash';
+    let model = localStorage.getItem('voxai_model') || 'gemini-2.0-flash';
+    const validModels = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+    if (!validModels.includes(model)) {
+      model = 'gemini-2.0-flash';
+      localStorage.setItem('voxai_model', model);
+    }
     const voiceFeedback = localStorage.getItem('voxai_voiceFeedback') !== 'false';
     const lang = localStorage.getItem('voxai_lang') || 'en-US';
 

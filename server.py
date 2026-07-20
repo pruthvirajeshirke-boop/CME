@@ -326,13 +326,17 @@ class VoxAIHandler(http.server.SimpleHTTPRequestHandler):
                 file_uri, file_name = self._upload_file_to_gemini(api_key, filename, file_type, file_bytes)
                 
                 gemini_data = None
-                fallback_models = ["gemini-2.0-flash", "gemini-1.5-flash"] if model == "gemini-2.0-flash" else [model]
+                valid_models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"]
+                if model not in valid_models:
+                    model = "gemini-2.0-flash"
+                fallback_models = [model] + [m for m in valid_models if m != model]
+
                 try:
                     # Wait for file to become active
                     print(f"[VoxAI] Waiting for file {file_name} to become active...")
                     self._wait_for_file_active(api_key, file_name)
                     
-                    for current_model in fallback_models:
+                    for idx, current_model in enumerate(fallback_models):
                         try:
                             gemini_url = f"{GEMINI_BASE_URL}/{current_model}:generateContent?key={api_key}"
                             
@@ -380,8 +384,8 @@ class VoxAIHandler(http.server.SimpleHTTPRequestHandler):
                             model = current_model
                             break
                         except urllib.error.HTTPError as err:
-                            if err.code in [404, 429] and current_model == "gemini-2.0-flash" and len(fallback_models) > 1:
-                                print(f"[VoxAI] HTTP {err.code} encountered on gemini-2.0-flash. Retrying with fallback model gemini-1.5-flash...")
+                            if err.code in [404, 429] and idx < len(fallback_models) - 1:
+                                print(f"[VoxAI] HTTP {err.code} on {current_model}. Retrying next model {fallback_models[idx + 1]}...")
                                 continue
                             raise err
                 finally:
@@ -422,10 +426,13 @@ class VoxAIHandler(http.server.SimpleHTTPRequestHandler):
                     self._send_json_error(400, "Prompt or file is required.")
                     return
                 
-                fallback_models = ["gemini-2.0-flash", "gemini-1.5-flash"] if model == "gemini-2.0-flash" else [model]
+                valid_models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"]
+                if model not in valid_models:
+                    model = "gemini-2.0-flash"
+                fallback_models = [model] + [m for m in valid_models if m != model]
                 gemini_data = None
                 
-                for current_model in fallback_models:
+                for idx, current_model in enumerate(fallback_models):
                     try:
                         gemini_url = f"{GEMINI_BASE_URL}/{current_model}:generateContent?key={api_key}"
                         
@@ -475,8 +482,8 @@ class VoxAIHandler(http.server.SimpleHTTPRequestHandler):
                         model = current_model
                         break
                     except urllib.error.HTTPError as err:
-                        if err.code in [404, 429] and current_model == "gemini-2.0-flash" and len(fallback_models) > 1:
-                            print(f"[VoxAI] HTTP {err.code} encountered on gemini-2.0-flash. Retrying with fallback model gemini-1.5-flash...")
+                        if err.code in [404, 429] and idx < len(fallback_models) - 1:
+                            print(f"[VoxAI] HTTP {err.code} on {current_model}. Retrying next model {fallback_models[idx + 1]}...")
                             continue
                         raise err
                 
