@@ -279,10 +279,12 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // --- Settings Changed Events ---
-  aiModeSelect.addEventListener('change', (e) => {
-    toggleGeminiConfigUI(e.target.value);
-    saveSettings();
-  });
+  if (aiModeSelect) {
+    aiModeSelect.addEventListener('change', (e) => {
+      toggleGeminiConfigUI(e.target.value);
+      saveSettings();
+    });
+  }
   apiKeyInput.addEventListener('input', saveSettings);
   geminiModelSelect.addEventListener('change', saveSettings);
   voiceFeedbackToggle.addEventListener('change', saveSettings);
