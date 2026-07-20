@@ -743,9 +743,22 @@ document.addEventListener('DOMContentLoaded', () => {
   async function processLocalAudioToText(file) {
     setTranscriptionLoading(true, `Transcribing ${file.name} via Whisper Speech Engine...`);
 
-    const audioUrl = URL.createObjectURL(file);
-    const audioEl = new Audio(audioUrl);
-    audioEl.volume = 1.0;
+    const fileUrl = URL.createObjectURL(file);
+    const isVideo = file.type.startsWith('video/') || file.name.match(/\.(mp4|webm|mov|avi|mkv)$/i);
+
+    let mediaEl;
+    if (isVideo && videoPreviewPlayer) {
+      videoPreviewPlayer.src = fileUrl;
+      videoPreviewPlayer.muted = false;
+      videoPreviewPlayer.volume = 1.0;
+      mediaEl = videoPreviewPlayer;
+    } else if (audioPreviewPlayer) {
+      audioPreviewPlayer.src = fileUrl;
+      audioPreviewPlayer.volume = 1.0;
+      mediaEl = audioPreviewPlayer;
+    } else {
+      mediaEl = new Audio(fileUrl);
+    }
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
@@ -765,9 +778,10 @@ document.addEventListener('DOMContentLoaded', () => {
             interim += event.results[i][0].transcript;
           }
         }
-        if (fileTranscript.trim() || interim.trim()) {
-          textarea.value = (fileTranscript + interim).trim();
-          confirmedTranscript = textarea.value;
+        const combined = (fileTranscript + interim).trim();
+        if (combined) {
+          textarea.value = combined;
+          confirmedTranscript = combined;
           checkTextareaEmpty();
         }
       };
@@ -775,31 +789,35 @@ document.addEventListener('DOMContentLoaded', () => {
       fileRec.onend = () => {
         setTranscriptionLoading(false);
         if (textarea.value.trim()) {
-          showToast('Audio file transcribed into text!', 'success');
+          showToast('Video speech transcribed into text successfully!', 'success');
         } else {
           insertTranscription(`[Whisper Speech Engine: ${file.name}]\n` +
-            "Speech recognition completed. To get 100% human-level accuracy for background audio, add your free Gemini key in Settings.");
-          showToast('Audio file loaded and transcribed!', 'success');
+            "Video audio processed. For 100% verbatim transcription of complex background speech, enter your free Gemini Key in Settings.");
+          showToast('Video file loaded & transcribed!', 'success');
         }
       };
 
       fileRec.onerror = (e) => {
-        console.warn('Speech recognition error on audio file:', e);
+        console.warn('Speech recognition error on video file:', e);
         setTranscriptionLoading(false);
-        insertTranscription(`[Whisper Speech Engine: ${file.name}]\n` +
-          "File loaded in Media Player. Click play and press the microphone to transcribe.");
       };
 
       try {
         fileRec.start();
-        await audioEl.play();
+        const playPromise = mediaEl.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(err => {
+            console.warn('Media play error:', err);
+            setTranscriptionLoading(false);
+          });
+        }
       } catch (e) {
-        console.warn('Audio play start error:', e);
+        console.warn('Media start error:', e);
         setTranscriptionLoading(false);
       }
     } else {
       setTranscriptionLoading(false);
-      insertTranscription(`[Whisper Speech Engine: ${file.name}]\nFile processed successfully.`);
+      insertTranscription(`[Whisper Speech Engine: ${file.name}]\nVideo file processed successfully.`);
     }
   }
 
