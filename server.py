@@ -203,7 +203,7 @@ class VoxAIHandler(http.server.SimpleHTTPRequestHandler):
             print(f"[VoxAI] Delete file error: {e}")
             self._send_json_error(500, f"Server delete error: {e}")
 
-    def _urlopen_with_retry(self, req, timeout=30, max_retries=4, initial_delay=4.0):
+    def _urlopen_with_retry(self, req, timeout=30, max_retries=3, initial_delay=2.0):
         """Execute urlopen with exponential backoff on HTTP 429 Rate Limit errors."""
         delay = initial_delay
         for attempt in range(max_retries + 1):
@@ -219,9 +219,9 @@ class VoxAIHandler(http.server.SimpleHTTPRequestHandler):
                             wait_time = float(retry_after)
                         except ValueError:
                             pass
-                    print(f"[VoxAI] Rate limit (429) encountered. Retrying in {wait_time} seconds (attempt {attempt + 1}/{max_retries})...")
+                    print(f"[VoxAI] Rate limit (429) encountered. Retrying in {wait_time}s (attempt {attempt + 1}/{max_retries})...")
                     time.sleep(wait_time)
-                    delay *= 2.0
+                    delay *= 1.5
                     continue
                 raise e
 
@@ -326,7 +326,7 @@ class VoxAIHandler(http.server.SimpleHTTPRequestHandler):
                 file_uri, file_name = self._upload_file_to_gemini(api_key, filename, file_type, file_bytes)
                 
                 gemini_data = None
-                valid_models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"]
+                valid_models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-1.5-pro"]
                 if model not in valid_models:
                     model = "gemini-2.0-flash"
                 fallback_models = [model] + [m for m in valid_models if m != model]
@@ -426,7 +426,7 @@ class VoxAIHandler(http.server.SimpleHTTPRequestHandler):
                     self._send_json_error(400, "Prompt or file is required.")
                     return
                 
-                valid_models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"]
+                valid_models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-1.5-pro"]
                 if model not in valid_models:
                     model = "gemini-2.0-flash"
                 fallback_models = [model] + [m for m in valid_models if m != model]

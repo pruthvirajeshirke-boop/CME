@@ -848,7 +848,16 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const mode = aiModeSelect.value;
       if (mode === 'gemini') {
-        await handleGeminiApiCall(textPrompt);
+        try {
+          await handleGeminiApiCall(textPrompt);
+        } catch (geminiErr) {
+          if (geminiErr.message.includes('429') || geminiErr.message.toLowerCase().includes('rate limit')) {
+            showToast('Gemini API rate limit reached. Switched seamlessly to Intelligent Local Agent!', 'warning');
+            await handleLocalAgentMock(textPrompt);
+          } else {
+            throw geminiErr;
+          }
+        }
       } else {
         await handleLocalAgentMock(textPrompt);
       }
