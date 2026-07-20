@@ -79,18 +79,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Settings (Local Storage) ---
   function saveSettings() {
-    localStorage.setItem('voxai_aiMode', aiModeSelect.value);
     localStorage.setItem('voxai_apiKey', apiKeyInput.value);
-    localStorage.setItem('voxai_openaiApiKey', openaiApiKeyInput ? openaiApiKeyInput.value : '');
     localStorage.setItem('voxai_model', geminiModelSelect.value);
     localStorage.setItem('voxai_voiceFeedback', voiceFeedbackToggle.checked);
     localStorage.setItem('voxai_lang', languageSelect.value);
   }
 
   function loadSettings() {
-    const aiMode = localStorage.getItem('voxai_aiMode') || 'local';
     const apiKey = localStorage.getItem('voxai_apiKey') || '';
-    const openaiApiKey = localStorage.getItem('voxai_openaiApiKey') || '';
     let model = localStorage.getItem('voxai_model') || 'gemini-1.5-flash';
     const validModels = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'];
     if (!validModels.includes(model)) {
@@ -100,14 +96,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const voiceFeedback = localStorage.getItem('voxai_voiceFeedback') !== 'false';
     const lang = localStorage.getItem('voxai_lang') || 'en-US';
 
-    aiModeSelect.value = aiMode;
     apiKeyInput.value = apiKey;
-    if (openaiApiKeyInput) openaiApiKeyInput.value = openaiApiKey;
     geminiModelSelect.value = model;
     voiceFeedbackToggle.checked = voiceFeedback;
     languageSelect.value = lang;
-
-    toggleGeminiConfigUI(aiMode);
   }
 
   function toggleGeminiConfigUI(mode) {
@@ -643,39 +635,9 @@ document.addEventListener('DOMContentLoaded', () => {
     showMediaPreview(file);
 
     try {
-      const aiMode = aiModeSelect.value;
       const apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
-      const openaiApiKey = openaiApiKeyInput ? openaiApiKeyInput.value.trim() : '';
 
-      // Pathway 1: OpenAI Whisper API
-      if (aiMode === 'whisper' && openaiApiKey) {
-        try {
-          setTranscriptionLoading(true, `Transcribing ${file.name} via OpenAI Whisper...`);
-          const base64Data = await readFileAsBase64(file);
-          
-          const response = await fetch('/api/whisper', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              apiKey: openaiApiKey,
-              file: { name: file.name, mimeType: mimeType, data: base64Data }
-            })
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            if (data.text) {
-              insertTranscription(data.text);
-              showToast('Transcribed via OpenAI Whisper!', 'success');
-              return;
-            }
-          }
-        } catch (wErr) {
-          console.warn('Whisper API failed, using Local Engine:', wErr);
-        }
-      }
-
-      // Pathway 2: Google Gemini API (if key is set)
+      // Pathway 1: Google Gemini API (if key is set)
       if (apiKey) {
         try {
           const model = geminiModelSelect.value;
