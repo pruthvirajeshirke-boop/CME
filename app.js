@@ -574,6 +574,44 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Media Player Preview elements
+  const mediaPreviewContainer = document.getElementById('mediaPreviewContainer');
+  const mediaPreviewTitle     = document.getElementById('mediaPreviewTitle');
+  const closeMediaPreviewBtn  = document.getElementById('closeMediaPreviewBtn');
+  const audioPreviewPlayer    = document.getElementById('audioPreviewPlayer');
+  const videoPreviewPlayer    = document.getElementById('videoPreviewPlayer');
+
+  if (closeMediaPreviewBtn) {
+    closeMediaPreviewBtn.addEventListener('click', () => {
+      if (mediaPreviewContainer) mediaPreviewContainer.classList.add('hidden');
+      if (audioPreviewPlayer) { audioPreviewPlayer.pause(); audioPreviewPlayer.src = ''; }
+      if (videoPreviewPlayer) { videoPreviewPlayer.pause(); videoPreviewPlayer.src = ''; }
+    });
+  }
+
+  function showMediaPreview(file) {
+    if (!mediaPreviewContainer) return;
+    const fileUrl = URL.createObjectURL(file);
+    const isVideo = file.type.startsWith('video/') || file.name.match(/\.(mp4|webm|mov|avi|mkv)$/i);
+
+    mediaPreviewContainer.classList.remove('hidden');
+    mediaPreviewTitle.textContent = `${isVideo ? '🎬 Video' : '🎵 Audio'}: ${file.name}`;
+
+    if (isVideo) {
+      if (audioPreviewPlayer) audioPreviewPlayer.classList.add('hidden');
+      if (videoPreviewPlayer) {
+        videoPreviewPlayer.src = fileUrl;
+        videoPreviewPlayer.classList.remove('hidden');
+      }
+    } else {
+      if (videoPreviewPlayer) videoPreviewPlayer.classList.add('hidden');
+      if (audioPreviewPlayer) {
+        audioPreviewPlayer.src = fileUrl;
+        audioPreviewPlayer.classList.remove('hidden');
+      }
+    }
+  }
+
   function getMimeType(file) {
     if (file.type) return file.type;
     const name = file.name.toLowerCase();
@@ -592,7 +630,7 @@ document.addEventListener('DOMContentLoaded', () => {
   async function handleFileUpload(file) {
     if (!file) return;
 
-    const MAX_SIZE = 2 * 1024 * 1024 * 1024; // 2 GB limit (Gemini Files API limit)
+    const MAX_SIZE = 2 * 1024 * 1024 * 1024; // 2 GB limit
     if (file.size > MAX_SIZE) {
       showToast('File is too large. Max supported size is 2 GB.', 'error');
       return;
@@ -601,30 +639,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const mimeType = getMimeType(file);
     const fileMbStr = (file.size / (1024 * 1024)).toFixed(1) + ' MB';
 
+    // Display media player preview
+    showMediaPreview(file);
+
     try {
       const aiMode = aiModeSelect.value;
-      if (aiMode === 'local') {
-        const apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
-        if (apiKey) {
-          aiModeSelect.value = 'gemini';
-          saveSettings();
-          toggleGeminiConfigUI('gemini');
-          showToast('Switched to Gemini AI for video transcription!', 'info');
-        } else {
-          sidebar.classList.add('active');
-          sidebarBackdrop.classList.add('active');
-          setTimeout(() => apiKeyInput && apiKeyInput.focus(), 300);
-          throw new Error('Enter your free Gemini API key in Settings to transcribe video & audio files!');
-        }
-      } else if (aiMode === 'whisper') {
-        const openaiApiKey = openaiApiKeyInput ? openaiApiKeyInput.value.trim() : '';
-        if (!openaiApiKey) {
-          sidebar.classList.add('active');
-          sidebarBackdrop.classList.add('active');
-          setTimeout(() => openaiApiKeyInput && openaiApiKeyInput.focus(), 300);
-          throw new Error('OpenAI API Key missing! Enter your OpenAI API key in Settings.');
-        }
+      const apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
+      const openaiApiKey = openaiApiKeyInput ? openaiApiKeyInput.value.trim() : '';
 
+      // Pathway 1: OpenAI Whisper API
+      if (aiMode === 'whisper' && openaiApiKey) {
         setTranscriptionLoading(true, `Transcribing ${file.name} via OpenAI Whisper...`);
         const base64Data = await readFileAsBase64(file);
         
@@ -633,11 +657,7 @@ document.addEventListener('DOMContentLoaded', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             apiKey: openaiApiKey,
-            file: {
-              name: file.name,
-              mimeType: mimeType,
-              data: base64Data
-            }
+            file: { name: file.name, mimeType: mimeType, data: base64Data }
           })
         });
 
@@ -651,18 +671,11 @@ document.addEventListener('DOMContentLoaded', () => {
         insertTranscription(data.text);
         showToast('Transcribed via OpenAI Whisper!', 'success');
         return;
-      } else {
-        const apiKey = apiKeyInput.value.trim();
-        if (!apiKey) {
-          sidebar.classList.add('active');
-          sidebarBackdrop.classList.add('active');
-          setTimeout(() => apiKeyInput.focus(), 300);
-          throw new Error('Gemini API Key missing! Enter your API key in Settings, or switch AI Mode to "Intelligent Local Agent".');
-        }
+      }
 
+      // Pathway 2: Google Gemini API (if key is set)
+      if (apiKey) {
         const model = geminiModelSelect.value;
-
-        // FAST PATHWAY: For files <= 20MB, use direct Inline Base64 (1-2 seconds, 0 CPU delay)
         if (file.size <= 20 * 1024 * 1024) {
           setTranscriptionLoading(true, `Transcribing ${file.name} (${fileMbStr})...`);
           const base64Data = await readFileAsBase64(file);
@@ -673,20 +686,12 @@ document.addEventListener('DOMContentLoaded', () => {
             body: JSON.stringify({
               apiKey: apiKey,
               model: model,
-              file: {
-                mimeType: mimeType,
-                data: base64Data
-              }
+              file: { mimeType: mimeType, data: base64Data }
             })
           });
 
           if (!response.ok) {
             const errData = await response.json();
-            if (response.status === 429 || (errData.error && errData.error.includes('429'))) {
-              showToast('Gemini rate limit active. Transcribed via VoxAI Local Engine.', 'warning');
-              insertTranscription(`[Transcription of ${file.name}]\nProcessed via VoxAI Speech Engine.`);
-              return;
-            }
             throw new Error(errData.error || `Server error ${response.status}`);
           }
 
@@ -694,13 +699,12 @@ document.addEventListener('DOMContentLoaded', () => {
           if (!data.text) throw new Error('Received empty transcription response.');
 
           insertTranscription(data.text);
-          showToast('File transcribed in seconds!', 'success');
+          showToast('File transcribed successfully via Gemini AI!', 'success');
           return;
         }
 
-        // RESUMABLE FILES API PATHWAY: For large files > 20MB
+        // Resumable upload for files > 20MB
         setTranscriptionLoading(true, `Uploading & Transcribing large file ${file.name} (${fileMbStr})...`);
-
         const response = await fetch('/api/generate', {
           method: 'POST',
           headers: {
@@ -714,11 +718,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!response.ok) {
           const errData = await response.json();
-          if (response.status === 429 || (errData.error && errData.error.includes('429'))) {
-            showToast('Gemini rate limit active. Transcribed via VoxAI Local Engine.', 'warning');
-            insertTranscription(`[Transcription of ${file.name}]\nProcessed via VoxAI Speech Engine.`);
-            return;
-          }
           throw new Error(errData.error || `Server error ${response.status}`);
         }
 
@@ -726,8 +725,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!data.text) throw new Error('Received empty transcription response.');
 
         insertTranscription(data.text);
-        showToast('File transcribed successfully!', 'success');
+        showToast('File transcribed successfully via Gemini AI!', 'success');
+        return;
       }
+
+      // Pathway 3: Local Engine (No API key required)
+      sidebar.classList.add('active');
+      sidebarBackdrop.classList.add('active');
+      setTimeout(() => apiKeyInput && apiKeyInput.focus(), 300);
+      showToast('Media loaded into Local Player! Enter your free Gemini Key in Settings for AI transcription.', 'info');
+
     } catch (err) {
       console.error(err);
       showToast(err.message || 'Error occurred during transcription.', 'error');

@@ -158,6 +158,16 @@
             <div class="interim-overlay" id="interimOverlay"></div>
           </div>
 
+          <!-- Audio/Video Player Preview Container -->
+          <div class="media-preview-container hidden" id="mediaPreviewContainer">
+            <div class="media-preview-header">
+              <span id="mediaPreviewTitle">🎵 Audio File</span>
+              <button class="close-preview-btn" id="closeMediaPreviewBtn" title="Remove media preview">&times;</button>
+            </div>
+            <audio id="audioPreviewPlayer" controls class="media-player hidden"></audio>
+            <video id="videoPreviewPlayer" controls class="media-player hidden"></video>
+          </div>
+
           <!-- Speech Controller Toolbar -->
           <div class="controls-toolbar">
             <div class="left-controls">

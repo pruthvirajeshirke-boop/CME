@@ -330,7 +330,7 @@ class VoxAIHandler(http.server.SimpleHTTPRequestHandler):
                 gemini_data = None
                 valid_models = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-flash-8b", "gemini-1.5-pro"]
                 if model not in valid_models:
-                    model = "gemini-2.0-flash"
+                    model = "gemini-1.5-flash"
                 fallback_models = [model] + [m for m in valid_models if m != model]
 
                 try:
@@ -430,7 +430,7 @@ class VoxAIHandler(http.server.SimpleHTTPRequestHandler):
                 
                 valid_models = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-flash-8b", "gemini-1.5-pro"]
                 if model not in valid_models:
-                    model = "gemini-2.0-flash"
+                    model = "gemini-1.5-flash"
                 fallback_models = [model] + [m for m in valid_models if m != model]
                 gemini_data = None
                 
@@ -442,12 +442,20 @@ class VoxAIHandler(http.server.SimpleHTTPRequestHandler):
                         if file_data:
                             parts.append({
                                 "inlineData": {
-                                    "mimeType": file_data.get("mimeType"),
+                                    "mimeType": file_data.get("mimeType", "audio/mp3"),
                                     "data": file_data.get("data")
                                 }
                             })
                         
-                            parts.append({"text": prompt or "Listen to the audio/video media carefully and write down every spoken word as verbatim transcript text. Do not summarize, output only the transcribed speech text."})
+                        default_text = "Listen to the audio/video media carefully and write down every spoken word as verbatim transcript text. Do not summarize, output only the transcribed speech text." if file_data else ""
+                        text_prompt = prompt or default_text
+                        
+                        if text_prompt:
+                            parts.append({"text": text_prompt})
+
+                        if not parts:
+                            self._send_json_error(400, "Request contains no valid prompt or file data.")
+                            return
                         
                         gemini_body = json.dumps({
                             "system_instruction": {
