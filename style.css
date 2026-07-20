@@ -254,6 +254,25 @@ select:focus, input[type="text"]:focus, input[type="password"]:focus {
   color: var(--text-primary);
 }
 
+.get-key-btn {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: rgba(99, 102, 241, 0.15);
+  color: var(--color-indigo);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: var(--border-radius-md);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: var(--transition-smooth);
+}
+
+.get-key-btn:hover {
+  background: var(--color-indigo);
+  color: #ffffff;
+}
+
 /* Custom switch toggle */
 .switch {
   position: relative;

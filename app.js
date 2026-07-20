@@ -91,10 +91,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const aiMode = localStorage.getItem('voxai_aiMode') || 'local';
     const apiKey = localStorage.getItem('voxai_apiKey') || '';
     const openaiApiKey = localStorage.getItem('voxai_openaiApiKey') || '';
-    let model = localStorage.getItem('voxai_model') || 'gemini-2.0-flash';
-    const validModels = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+    let model = localStorage.getItem('voxai_model') || 'gemini-1.5-flash';
+    const validModels = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'];
     if (!validModels.includes(model)) {
-      model = 'gemini-2.0-flash';
+      model = 'gemini-1.5-flash';
       localStorage.setItem('voxai_model', model);
     }
     const voiceFeedback = localStorage.getItem('voxai_voiceFeedback') !== 'false';

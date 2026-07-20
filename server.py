@@ -514,7 +514,7 @@ class VoxAIHandler(http.server.SimpleHTTPRequestHandler):
                 400: f"Bad request: {err_msg}",
                 401: f"Invalid API key (401): {err_msg}. Please check your API key in Settings.",
                 403: f"API key forbidden (403): {err_msg}. Check API key restrictions in Google AI Studio.",
-                404: f"Model not found (404). Try switching to 'Gemini 2.0 Flash' in Settings.",
+                404: f"API Key Error (404): Could not find model with your key ({err_msg}). Verify your key at https://aistudio.google.com/app/apikey",
                 429: "Rate limit exceeded (429). Wait a moment and try again, or switch model in settings to 'Gemini 1.5 Flash'.",
             }
             user_msg = status_map.get(e.code, f"Gemini API Error {e.code}: {err_msg}")
