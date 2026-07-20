@@ -528,7 +528,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const aiMode = aiModeSelect.value;
       if (aiMode === 'local') {
         setTranscriptionLoading(true, `Uploading & Transcribing ${file.name} (${fileMbStr})...`);
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        await new Promise(resolve => setTimeout(resolve, 100));
         const simulatedText = `[Simulated Transcription of ${file.name}]\nThis is a mock transcription of your uploaded ${file.type.split('/')[0]} file. To get real transcription, please configure your Gemini API Key in Settings and switch the AI Mode to "Google Gemini API".`;
         insertTranscription(simulatedText);
         showToast('File transcribed successfully (Simulated)!', 'success');
@@ -936,7 +936,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function handleLocalAgentMock(prompt) {
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     const promptLower = prompt.toLowerCase();
     const isHindi = languageSelect.value === 'hi-IN' || /[\u0900-\u097F]/.test(prompt);
