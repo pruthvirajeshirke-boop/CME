@@ -81,6 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function saveSettings() {
     localStorage.setItem('voxai_aiMode', aiModeSelect.value);
     localStorage.setItem('voxai_apiKey', apiKeyInput.value);
+    localStorage.setItem('voxai_openaiApiKey', openaiApiKeyInput ? openaiApiKeyInput.value : '');
     localStorage.setItem('voxai_model', geminiModelSelect.value);
     localStorage.setItem('voxai_voiceFeedback', voiceFeedbackToggle.checked);
     localStorage.setItem('voxai_lang', languageSelect.value);
@@ -89,6 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function loadSettings() {
     const aiMode = localStorage.getItem('voxai_aiMode') || 'local';
     const apiKey = localStorage.getItem('voxai_apiKey') || '';
+    const openaiApiKey = localStorage.getItem('voxai_openaiApiKey') || '';
     let model = localStorage.getItem('voxai_model') || 'gemini-2.0-flash';
     const validModels = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
     if (!validModels.includes(model)) {
@@ -100,6 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     aiModeSelect.value = aiMode;
     apiKeyInput.value = apiKey;
+    if (openaiApiKeyInput) openaiApiKeyInput.value = openaiApiKey;
     geminiModelSelect.value = model;
     voiceFeedbackToggle.checked = voiceFeedback;
     languageSelect.value = lang;
@@ -110,9 +113,22 @@ document.addEventListener('DOMContentLoaded', () => {
   function toggleGeminiConfigUI(mode) {
     if (mode === 'gemini') {
       geminiConfigGroup.classList.remove('hidden');
+      if (whisperConfigGroup) whisperConfigGroup.classList.add('hidden');
+    } else if (mode === 'whisper') {
+      geminiConfigGroup.classList.add('hidden');
+      if (whisperConfigGroup) whisperConfigGroup.classList.remove('hidden');
     } else {
       geminiConfigGroup.classList.add('hidden');
+      if (whisperConfigGroup) whisperConfigGroup.classList.add('hidden');
     }
+  }
+
+  if (toggleOpenaiApiKey && openaiApiKeyInput) {
+    toggleOpenaiApiKey.addEventListener('click', () => {
+      const type = openaiApiKeyInput.getAttribute('type') === 'password' ? 'text' : 'password';
+      openaiApiKeyInput.setAttribute('type', type);
+    });
+    openaiApiKeyInput.addEventListener('input', saveSettings);
   }
 
   // --- Sidebar Events ---
@@ -464,6 +480,56 @@ document.addEventListener('DOMContentLoaded', () => {
       .catch(() => showToast('Failed to copy text.', 'error'));
   });
 
+  if (downloadSrtBtn) {
+    downloadSrtBtn.addEventListener('click', () => {
+      const text = textarea.value.trim();
+      if (!text) {
+        showToast('No text available to export subtitles.', 'error');
+        return;
+      }
+
+      const srtContent = generateSrtSubtitles(text);
+      downloadFile(srtContent, 'voxai_subtitles.srt', 'text/plain');
+      showToast('Exported Clipchamp .SRT Subtitles!', 'success');
+    });
+  }
+
+  function generateSrtSubtitles(text) {
+    const sentences = text.match(/[^.!?]+[.!?]+|\S+/g) || [text];
+    let srt = '';
+    let currentTime = 0; // seconds
+
+    sentences.forEach((sentence, index) => {
+      const duration = Math.max(2.5, sentence.trim().split(/\s+/).length * 0.4);
+      const startTime = formatSrtTime(currentTime);
+      currentTime += duration;
+      const endTime = formatSrtTime(currentTime);
+
+      srt += `${index + 1}\n${startTime} --> ${endTime}\n${sentence.trim()}\n\n`;
+    });
+
+    return srt;
+  }
+
+  function formatSrtTime(totalSeconds) {
+    const hrs = Math.floor(totalSeconds / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const secs = Math.floor(totalSeconds % 60);
+    const millis = Math.floor((totalSeconds % 1) * 1000);
+
+    const pad = (n, z = 2) => String(n).padStart(z, '0');
+    return `${pad(hrs)}:${pad(mins)}:${pad(secs)},${pad(millis, 3)}`;
+  }
+
+  function downloadFile(content, fileName, contentType) {
+    const a = document.createElement('a');
+    const file = new Blob([content], { type: contentType });
+    a.href = URL.createObjectURL(file);
+    a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
   // --- File Upload & Transcription Handling ---
   uploadFileBtn.addEventListener('click', () => {
     if (isListening) {
@@ -539,9 +605,44 @@ document.addEventListener('DOMContentLoaded', () => {
       if (aiMode === 'local') {
         setTranscriptionLoading(true, `Transcribing ${file.name} (${fileMbStr})...`);
         await new Promise(resolve => setTimeout(resolve, 100));
-        const simulatedText = `[Simulated Transcription of ${file.name}]\nThis is a mock transcription of your uploaded ${file.name} file. Configure your Gemini API Key in Settings to get real AI transcription.`;
+        const simulatedText = `[Simulated Transcription of ${file.name}]\nThis is a mock transcription of your uploaded ${file.name} file. Configure your Gemini or Whisper API Key in Settings to get real AI transcription.`;
         insertTranscription(simulatedText);
         showToast('File transcribed successfully (Simulated)!', 'success');
+      } else if (aiMode === 'whisper') {
+        const openaiApiKey = openaiApiKeyInput ? openaiApiKeyInput.value.trim() : '';
+        if (!openaiApiKey) {
+          sidebar.classList.add('active');
+          sidebarBackdrop.classList.add('active');
+          setTimeout(() => openaiApiKeyInput && openaiApiKeyInput.focus(), 300);
+          throw new Error('OpenAI API Key missing! Enter your OpenAI API key in Settings.');
+        }
+
+        setTranscriptionLoading(true, `Transcribing ${file.name} via OpenAI Whisper...`);
+        const base64Data = await readFileAsBase64(file);
+        
+        const response = await fetch('/api/whisper', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            apiKey: openaiApiKey,
+            file: {
+              name: file.name,
+              mimeType: mimeType,
+              data: base64Data
+            }
+          })
+        });
+
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.error || `Whisper error ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (!data.text) throw new Error('Received empty response from OpenAI Whisper.');
+        insertTranscription(data.text);
+        showToast('Transcribed via OpenAI Whisper!', 'success');
+        return;
       } else {
         const apiKey = apiKeyInput.value.trim();
         if (!apiKey) {

@@ -61,6 +61,8 @@ class VoxAIHandler(http.server.SimpleHTTPRequestHandler):
         """Handle API requests."""
         if self.path.startswith("/api/generate"):
             self._handle_gemini_proxy()
+        elif self.path.startswith("/api/whisper"):
+            self._handle_whisper_proxy()
         elif self.path == "/api/save":
             self._handle_save_file()
         elif self.path == "/api/delete":
@@ -532,6 +534,70 @@ class VoxAIHandler(http.server.SimpleHTTPRequestHandler):
         except Exception as e:
             print(f"[VoxAI] Unexpected error: {type(e).__name__}: {e}")
             self._send_json_error(500, f"Server error: {type(e).__name__}: {e}")
+
+    def _handle_whisper_proxy(self):
+        """Proxy speech transcription request to OpenAI Whisper API."""
+        try:
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(content_length)
+            request_data = json.loads(body)
+            
+            api_key = request_data.get("apiKey", "").strip() or os.environ.get("OPENAI_API_KEY", "").strip()
+            if not api_key:
+                self._send_json_error(400, "OpenAI API key is required for Whisper mode.")
+                return
+
+            file_info = request_data.get("file", {})
+            file_b64 = file_info.get("data", "")
+            filename = file_info.get("name", "audio.wav")
+            mime_type = file_info.get("mimeType", "audio/wav")
+
+            if not file_b64:
+                self._send_json_error(400, "File data is required for Whisper transcription.")
+                return
+
+            import base64
+            raw_bytes = base64.b64decode(file_b64)
+
+            # Build multipart/form-data request for OpenAI Whisper API
+            boundary = f"----WebKitFormBoundary{os.urandom(8).hex()}"
+            body_parts = []
+
+            # model field
+            body_parts.append(f"--{boundary}\r\nContent-Disposition: form-data; name=\"model\"\r\n\r\nwhisper-1\r\n".encode("utf-8"))
+
+            # file field
+            body_parts.append(f"--{boundary}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"{filename}\"\r\nContent-Type: {mime_type}\r\n\r\n".encode("utf-8"))
+            body_parts.append(raw_bytes)
+            body_parts.append(f"\r\n--{boundary}--\r\n".encode("utf-8"))
+
+            req_body = b"".join(body_parts)
+
+            req = urllib.request.Request(
+                "https://api.openai.com/v1/audio/transcriptions",
+                data=req_body,
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": f"multipart/form-data; boundary={boundary}"
+                },
+                method="POST"
+            )
+
+            print(f"[VoxAI] Requesting OpenAI Whisper transcription for {filename} ({len(raw_bytes)} bytes)...")
+            response_body, _ = self._urlopen_with_retry(req, timeout=120)
+            whisper_res = json.loads(response_body)
+
+            text_result = whisper_res.get("text", "")
+            print(f"[VoxAI] Whisper response OK ({len(text_result)} chars)")
+            self._send_json_response(200, {"text": text_result, "model": "whisper-1"})
+
+        except urllib.error.HTTPError as e:
+            error_body = e.read().decode("utf-8", errors="replace")
+            print(f"[VoxAI] Whisper HTTP error {e.code}: {error_body}")
+            self._send_json_error(e.code if e.code < 600 else 502, f"OpenAI Whisper API Error {e.code}: {error_body[:200]}")
+        except Exception as e:
+            print(f"[VoxAI] Whisper error: {e}")
+            self._send_json_error(500, f"Whisper error: {e}")
 
     def _send_cors_headers(self):
         self.send_header("Access-Control-Allow-Origin", "*")
