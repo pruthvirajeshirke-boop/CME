@@ -603,11 +603,18 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const aiMode = aiModeSelect.value;
       if (aiMode === 'local') {
-        setTranscriptionLoading(true, `Transcribing ${file.name} (${fileMbStr})...`);
-        await new Promise(resolve => setTimeout(resolve, 100));
-        const simulatedText = `[Simulated Transcription of ${file.name}]\nThis is a mock transcription of your uploaded ${file.name} file. Configure your Gemini or Whisper API Key in Settings to get real AI transcription.`;
-        insertTranscription(simulatedText);
-        showToast('File transcribed successfully (Simulated)!', 'success');
+        const apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
+        if (apiKey) {
+          aiModeSelect.value = 'gemini';
+          saveSettings();
+          toggleGeminiConfigUI('gemini');
+          showToast('Switched to Gemini AI for video transcription!', 'info');
+        } else {
+          sidebar.classList.add('active');
+          sidebarBackdrop.classList.add('active');
+          setTimeout(() => apiKeyInput && apiKeyInput.focus(), 300);
+          throw new Error('Enter your free Gemini API key in Settings to transcribe video & audio files!');
+        }
       } else if (aiMode === 'whisper') {
         const openaiApiKey = openaiApiKeyInput ? openaiApiKeyInput.value.trim() : '';
         if (!openaiApiKey) {

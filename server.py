@@ -328,7 +328,7 @@ class VoxAIHandler(http.server.SimpleHTTPRequestHandler):
                 file_uri, file_name = self._upload_file_to_gemini(api_key, filename, file_type, file_bytes)
                 
                 gemini_data = None
-                valid_models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-1.5-pro"]
+                valid_models = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-flash-8b", "gemini-1.5-pro"]
                 if model not in valid_models:
                     model = "gemini-2.0-flash"
                 fallback_models = [model] + [m for m in valid_models if m != model]
@@ -428,7 +428,7 @@ class VoxAIHandler(http.server.SimpleHTTPRequestHandler):
                     self._send_json_error(400, "Prompt or file is required.")
                     return
                 
-                valid_models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-1.5-pro"]
+                valid_models = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-flash-8b", "gemini-1.5-pro"]
                 if model not in valid_models:
                     model = "gemini-2.0-flash"
                 fallback_models = [model] + [m for m in valid_models if m != model]
