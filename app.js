@@ -508,20 +508,21 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    const MAX_SIZE = 2 * 1024 * 1024 * 1024; // 2 GB
+    const MAX_SIZE = 2 * 1024 * 1024 * 1024; // 2 GB limit (Gemini Files API limit)
     if (file.size > MAX_SIZE) {
-      showToast('File is too large. Max size is 2GB.', 'error');
+      showToast('File is too large. Max supported size is 2 GB.', 'error');
       return;
     }
 
     let uploadFile = file;
     let uploadName = file.name;
     let uploadType = file.type;
+    const fileMbStr = (file.size / (1024 * 1024)).toFixed(1) + ' MB';
 
     try {
       const aiMode = aiModeSelect.value;
       if (aiMode === 'local') {
-        setTranscriptionLoading(true, `Uploading & Transcribing ${file.name}...`);
+        setTranscriptionLoading(true, `Uploading & Transcribing ${file.name} (${fileMbStr})...`);
         await new Promise(resolve => setTimeout(resolve, 2000));
         const simulatedText = `[Simulated Transcription of ${file.name}]\nThis is a mock transcription of your uploaded ${file.type.split('/')[0]} file. To get real transcription, please configure your Gemini API Key in Settings and switch the AI Mode to "Google Gemini API".`;
         insertTranscription(simulatedText);
@@ -532,11 +533,12 @@ document.addEventListener('DOMContentLoaded', () => {
           sidebar.classList.add('active');
           sidebarBackdrop.classList.add('active');
           setTimeout(() => apiKeyInput.focus(), 300);
-          throw new Error('Please enter your Gemini API key in Settings first.');
+          throw new Error('Gemini API Key missing! Enter your API key in Settings, or switch AI Mode to "Intelligent Local Agent".');
         }
 
-        // Optimize audio/video files by extracting and downsampling audio to save bandwidth
-        if (file.type.startsWith('video/') || file.type.startsWith('audio/')) {
+        // Optimize smaller media files (<50MB) by extracting audio in browser.
+        // For larger files (>=50MB), skip in-browser decoding to avoid RAM crash and upload directly to Gemini Files API.
+        if ((file.type.startsWith('video/') || file.type.startsWith('audio/')) && file.size < 50 * 1024 * 1024) {
           setTranscriptionLoading(true, `Optimizing media for rapid upload (extracting audio track)...`);
           try {
             const audioBlob = await extractAudioFromMedia(file);
@@ -550,7 +552,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
 
-        setTranscriptionLoading(true, `Uploading & Transcribing ${uploadName}...`);
+        setTranscriptionLoading(true, `Uploading & Transcribing ${file.name} (${fileMbStr})...`);
 
         const model = geminiModelSelect.value;
         const response = await fetch('/api/generate', {
