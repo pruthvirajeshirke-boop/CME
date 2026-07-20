@@ -524,7 +524,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- File Upload & Transcription Handling ---
-  uploadFileBtn.addEventListener('click', () => {
+  uploadFileBtn.addEventListener('click', (e) => {
+    e.preventDefault();
     if (isListening) {
       stopRecognition();
     }
@@ -534,6 +535,7 @@ document.addEventListener('DOMContentLoaded', () => {
   fileUploadInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (file) {
+      showToast(`Uploading ${file.name}...`, 'info');
       handleFileUpload(file);
     }
     fileUploadInput.value = '';
@@ -760,8 +762,12 @@ document.addEventListener('DOMContentLoaded', () => {
       };
 
       fileRec.onerror = (e) => {
-        console.warn('Speech recognition error on video file:', e);
+        console.warn('Speech recognition error on media file:', e);
         setTranscriptionLoading(false);
+        if (!textarea.value.trim()) {
+          insertTranscription(`[Whisper Speech Engine: ${file.name}]\n` +
+            "Media file loaded in player. Click play or enter your free Gemini key in Settings for cloud AI transcription.");
+        }
       };
 
       try {
@@ -771,15 +777,23 @@ document.addEventListener('DOMContentLoaded', () => {
           playPromise.catch(err => {
             console.warn('Media play error:', err);
             setTranscriptionLoading(false);
+            if (!textarea.value.trim()) {
+              insertTranscription(`[Whisper Speech Engine: ${file.name}]\n` +
+                "Media file loaded in player. Click play or enter your free Gemini key in Settings for cloud AI transcription.");
+            }
           });
         }
       } catch (e) {
         console.warn('Media start error:', e);
         setTranscriptionLoading(false);
+        if (!textarea.value.trim()) {
+          insertTranscription(`[Whisper Speech Engine: ${file.name}]\n` +
+            "Media file loaded in player. Click play or enter your free Gemini key in Settings for cloud AI transcription.");
+        }
       }
     } else {
       setTranscriptionLoading(false);
-      insertTranscription(`[Whisper Speech Engine: ${file.name}]\nVideo file processed successfully.`);
+      insertTranscription(`[Whisper Speech Engine: ${file.name}]\nMedia file loaded successfully.`);
     }
   }
 
